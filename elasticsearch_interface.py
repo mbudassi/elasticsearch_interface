@@ -10,11 +10,25 @@ class ElasticsearchInterface():
 
         #Mapping "initial" index i.e. creating elasticsearch schema for initial documents. Most important: date is of type double, so that it can be sorted later. We are not using Elasticsearch's native date datatype because it does not save 6 subsecond decimal places. Instead, we are using epoch time. (Level of precision should be identical to sqllite implementation). Doc_type is being phased out in next version of elasticsearch, so we'll set it arbitrarily to "na" here, and never make use of it.
         if not self.es.indices.exists(index="initial"):
-            self.es.indices.create(index = "initial", body={"mappings": {"na": {"properties": {"symbol": {"type": "keyword"},"is_vowel": {"type": "keyword"},"date": {"type": "double"}}}}})
+            self.es.indices.create(index = "initial", body={"mappings":          \
+                                                           {"na":                \
+                                                           {"properties":        \
+                                                           {"symbol":            \
+                                                           {"type": "keyword" }, \
+                                                            "is_vowel":          \
+                                                           {"type": "keyword"},  \
+                                                            "date":              \
+                                                           {"type": "double"}}}}})
 
         #Mapping "followup" index i.e. creating elasticsearch schema for followup documents. In addition to date double format, initid type must be set to keyword for term matching later.
         if not self.es.indices.exists(index="followup"):
-            self.es.indices.create(index = "followup", body={"mappings": {"na": {"properties": {"initid": {"type":  "keyword"},"date": {"type":  "double"}}}}})
+            self.es.indices.create(index = "followup", body={"mappings":         \
+                                                            {"na":               \
+                                                            {"properties":       \
+                                                            {"initid":           \
+                                                            {"type": "keyword"}, \
+                                                             "date":             \
+                                                            {"type": "double"}}}}})
 
     #Different indices for different fields: Initial document contains "symbol","is_vowel", and "date". uuid is stored in native "id" field
     def log_initial(self, uuid, symbol, is_vowel):
@@ -53,7 +67,9 @@ class ElasticsearchInterface():
             #Get the id for every document in the above symbol-query, store it in a list, and see if it matches any followup "initid" (Note, can't search more than 1024 terms)
             #Set returned documents to 0 because we don't care about the content of the documents 
             uuids = [x['_id'] for x in symb_all['hits']['hits']]
-            follow_count = self.es.search(index="followup", body={"query": {"terms": {"initid":uuids}}},size=0)
+            follow_count = self.es.search(index="followup", body={"query": \
+                                                                 {"terms": \
+                                                                 {"initid": uuids}}}, size=0)
            
             #If it does match followup document "initid"s, find out how many
             followups += follow_count['hits']['total']
@@ -65,13 +81,18 @@ class ElasticsearchInterface():
 
             #Get the date of the last retrieved document, and "search after" for the rest of them, 1000 at a time, picking up from this date.
             z = x['_source']['date']
-            symb_all = self.es.search(index="initial", body={"query": {"match": {"symbol":{"query":symbol}}},"sort":"date","search_after":[z]}, size=1000)
+            symb_all = self.es.search(index="initial", body={"query":            \
+                                                            {"match":            \
+                                                            {"symbol":           \
+                                                            {"query": symbol}}}, \
+                                                             "sort": "date",     \
+                                                             "search_after": [z]}, size=1000)
             
         #Assemble the results, and return it
-        stats = {"symbol"   : symbol,\
-                 "count"    : count,\
-                 "latest"   : latest,\
-                 "earliest" : earliest,\
+        stats = {"symbol"   : symbol,   \
+                 "count"    : count,    \
+                 "latest"   : latest,   \
+                 "earliest" : earliest, \
                  "followups": followups}
 
         return stats
@@ -97,7 +118,24 @@ class ElasticsearchInterface():
 
             #Identical to symbol aggregates function, except we specify the range:
             #"bool" sets up the conditional statement: must match symbol and be within range, greater than or equal to (gte) lower bound and less than or equal to (lte) the upper one.
-            symb_all = self.es.search(index="initial", body={"query":{"bool":{"must":[{"match": {"symbol":{"query":symbol}}},{"range":{"date":{"gte":xlower,"lte":xupper}}} ] }},"sort":"date","aggs":{"earliest":{"min":{"field":"date"}},"latest":{"max":{"field":"date"}}}},size=1000)
+            symb_all = self.es.search(index="initial", body={"query":               \
+                                                            {"bool":                \
+                                                            {"must":                \
+                                                           [{"match":               \
+                                                            {"symbol":              \
+                                                            {"query": symbol}}},    \
+                                                            {"range":               \
+                                                            {"date":                \
+                                                            {"gte": xlower,         \
+                                                             "lte": xupper}}} ] }}, \
+                                                             "sort": "date",        \
+                                                             "aggs":                \
+                                                            {"earliest":            \
+                                                            {"min":                 \
+                                                            {"field": "date"}},     \
+                                                             "latest":              \
+                                                            {"max":                 \
+                                                            {"field": "date"}}}}, size=1000)
 
             count = symb_all['hits']['total']
 
@@ -111,7 +149,15 @@ class ElasticsearchInterface():
 
                     #Range must also be indicated for the followup documents that match the initial ids
                     uuids = [x['_id'] for x in symb_all['hits']['hits']]
-                    follow_count = self.es.search(index="followup", body={"query":{"bool":{"must": [ {"terms": {"initid":uuids}},{"range":{"date":{"gte":xlower,"lte":xupper}}} ] }}},size=0)
+                    follow_count = self.es.search(index="followup", body={"query":           \
+                                                                         {"bool":            \
+                                                                         {"must":            \
+                                                                        [{"terms":           \
+                                                                         {"initid": uuids}}, \
+                                                                         {"range":           \
+                                                                         {"date":            \
+                                                                         {"gte": xlower,     \
+                                                                          "lte": xupper}}} ] }}}, size=0)
 
                     followups += follow_count['hits']['total']
                     total_track += len(uuids)
@@ -120,12 +166,23 @@ class ElasticsearchInterface():
                         break
 
                     z = x['_source']['date']
-                    symb_all = self.es.search(index="initial", body={"query":{"bool":{"must":[{"match": {"symbol":{"query":symbol}}},{"range":{"date":{"gte":xlower,"lte":xupper}}} ] }},"sort":"date","search_after":[z]},size=1000)
+                    symb_all = self.es.search(index="initial", body={"query":               \
+                                                                    {"bool":                \
+                                                                    {"must":                \
+                                                                   [{"match":               \
+                                                                    {"symbol":              \
+                                                                    {"query": symbol}}},    \
+                                                                    {"range":               \
+                                                                    {"date":                \
+                                                                    {"gte": xlower,         \
+                                                                     "lte": xupper}}} ] }}, \
+                                                                     "sort": "date",        \
+                                                                     "search_after": [z]}, size=1000)
 
-                stats = {"symbol"   : symbol,\
-                         "count"    : count,\
-                         "latest"   : latest,\
-                         "earliest" : earliest,\
+                stats = {"symbol"   : symbol,   \
+                         "count"    : count,    \
+                         "latest"   : latest,   \
+                         "earliest" : earliest, \
                          "followups": followups}
             
                 #Rather than returning the collected values, we collect it in an aggregate
