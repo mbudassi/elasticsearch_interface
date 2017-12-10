@@ -54,7 +54,18 @@ class ElasticsearchInterface():
 
         #Query for the symbol, and use aggs to aggregate results and determine the min and max fielddates.
         #Limit number of returned documents to 1000 to limit memory usage. Sort them to pick up where we left off, if there are more than 1000.
-        symb_all = self.es.search(index="initial", body={"query": {"match": {"symbol":{"query":symbol}}},"sort":"date","aggs":{"earliest":{"min":{"field":"date"}},"latest":{"max":{"field":"date"}}}}, size=1000)
+        symb_all = self.es.search(index="initial", body={"query":            \
+                                                        {"match":            \
+                                                        {"symbol":           \
+                                                        {"query": symbol}}}, \
+                                                         "sort": "date",     \
+                                                         "aggs":             \
+                                                        {"earliest":         \
+                                                        {"min":              \
+                                                        {"field": "date"}},  \
+                                                         "latest":           \
+                                                        {"max":              \
+                                                        {"field": "date"}}}}, size=1000)
 
         #count is the actual number of matches, and may be much bigger than 1000. Latest and earliest are converted back from epoch time to human readable.
         count = symb_all['hits']['total']  
