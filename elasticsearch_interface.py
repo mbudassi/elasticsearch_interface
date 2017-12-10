@@ -33,17 +33,17 @@ class ElasticsearchInterface():
     #Different indices for different fields: Initial document contains "symbol","is_vowel", and "date". uuid is stored in native "id" field
     def log_initial(self, uuid, symbol, is_vowel):
 
-        entry = {"symbol"  : symbol,\
-                 "is_vowel": is_vowel,\
-                 "date"    : 1000000*float(datetime.utcnow().strftime('%s.%f'))}
+        entry = {"symbol": symbol,     \
+                 "is_vowel": is_vowel, \
+                 "date": 1000000*float(datetime.utcnow().strftime('%s.%f'))}
 
         self.es.index("initial", doc_type='na', id=uuid, body=entry)
 
     #Different indices for different fields: Followup document contains uuid (we save it as initid to remind ourselves that it is the uuid of the initial entry), and date. We don't care what the id of the followup is though, so we let it be automatically assigned.
     def log_followup(self, uuid):
 
-        entry = {"initid"  : uuid,\
-                 "date"    : 1000000*float(datetime.utcnow().strftime('%s.%f'))}
+        entry = {"initid": uuid, \
+                 "date": 1000000*float(datetime.utcnow().strftime('%s.%f'))}
 
         self.es.index("followup", doc_type='na', body=entry)
 
