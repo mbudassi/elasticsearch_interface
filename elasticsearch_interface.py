@@ -111,7 +111,6 @@ class ElasticsearchInterface():
             followups = 0
             total_track = 0
 
-            
             symb_all = self.es.search(index="initial", body={"query":               \
                                                             {"bool":                \
                                                             {"must":                \
