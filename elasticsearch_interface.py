@@ -29,21 +29,26 @@ class ElasticsearchInterface():
 
     def log_initial(self, uuid, symbol, is_vowel):
 
+        conv_ms = 1000000
+        
         entry = {"symbol": symbol,     \
                  "is_vowel": is_vowel, \
-                 "date": 1000000*float(datetime.utcnow().strftime('%s.%f'))}
+                 "date": conv_ms*float(datetime.utcnow().strftime('%s.%f'))}
 
         self.es.index("initial", doc_type='na', id=uuid, body=entry)
 
     def log_followup(self, uuid):
 
         entry = {"initid": uuid, \
-                 "date": 1000000*float(datetime.utcnow().strftime('%s.%f'))}
+                 "date": conv_ms*float(datetime.utcnow().strftime('%s.%f'))}
 
         self.es.index("followup", doc_type='na', body=entry)
 
     def symbol_aggregates(self, symbol):
 
+        conv_ms = 1000000
+        es_pull = 1000
+        es_no_pull = 0
         followups = 0
         total_track = 0
 
@@ -58,18 +63,18 @@ class ElasticsearchInterface():
                                                         {"field": "date"}},  \
                                                          "latest":           \
                                                         {"max":              \
-                                                        {"field": "date"}}}}, size=1000)
+                                                        {"field": "date"}}}}, size=es_pull)
 
         count = symb_all['hits']['total']  
-        latest = datetime.utcfromtimestamp(symb_all['aggregations']['latest']['value']/1000000).strftime('%Y-%m-%d %H:%M:%S.%f')
-        earliest = datetime.utcfromtimestamp(symb_all['aggregations']['earliest']['value']/1000000).strftime('%Y-%m-%d %H:%M:%S.%f')
+        latest = datetime.utcfromtimestamp(symb_all['aggregations']['latest']['value']/conv_ms).strftime('%Y-%m-%d %H:%M:%S.%f')
+        earliest = datetime.utcfromtimestamp(symb_all['aggregations']['earliest']['value']/conv_ms).strftime('%Y-%m-%d %H:%M:%S.%f')
 
         while True:
         
             uuids = [x['_id'] for x in symb_all['hits']['hits']]
             follow_count = self.es.search(index="followup", body={"query": \
                                                                  {"terms": \
-                                                                 {"initid": uuids}}}, size=0)
+                                                                 {"initid": uuids}}}, size=es_no_pull)
            
             followups += follow_count['hits']['total']
             total_track += len(uuids)
@@ -83,7 +88,7 @@ class ElasticsearchInterface():
                                                             {"symbol":           \
                                                             {"query": symbol}}}, \
                                                              "sort": "date",     \
-                                                             "search_after": [z]}, size=1000)
+                                                             "search_after": [z]}, size=es_pull)
             
         stats = {"symbol"   : symbol,   \
                  "count"    : count,    \
@@ -95,17 +100,19 @@ class ElasticsearchInterface():
         
     def range_aggregates(self, lower, upper):
         
+        conv_ms = 1000000
+        es_pull = 1000
+        es_no_pull = 0
+        symbol_aggs = []
+        
         l_millidiv = lower.split('.')
         l_nomilli = time.mktime(time.strptime(l_millidiv[0], "%Y-%m-%d %H:%M:%S"))
-        xlower = 1000000*float(l_nomilli) + float(l_millidiv[1])
+        xlower = conv_ms*float(l_nomilli) + float(l_millidiv[1])
 
         u_millidiv = upper.split('.')
         u_nomilli = time.mktime(time.strptime(u_millidiv[0], "%Y-%m-%d %H:%M:%S"))
-        xupper = 1000000*float(u_nomilli) + float(u_millidiv[1])
-
-        symbol_aggs = []
-
-        
+        xupper = conv_ms*float(u_nomilli) + float(u_millidiv[1])
+   
         for symbol in 'abcdefghijklmnopqrstuvwxyz':
 
             followups = 0
@@ -128,14 +135,14 @@ class ElasticsearchInterface():
                                                             {"field": "date"}},     \
                                                              "latest":              \
                                                             {"max":                 \
-                                                            {"field": "date"}}}}, size=1000)
+                                                            {"field": "date"}}}}, size=es_pull)
 
             count = symb_all['hits']['total']
 
             if count:
             
-                latest = datetime.utcfromtimestamp(symb_all['aggregations']['latest']['value']/1000000).strftime('%Y-%m-%d %H:%M:%S.%f')
-                earliest = datetime.utcfromtimestamp(symb_all['aggregations']['earliest']['value']/1000000).strftime('%Y-%m-%d %H:%M:%S.%f')
+                latest = datetime.utcfromtimestamp(symb_all['aggregations']['latest']['value']/conv_ms).strftime('%Y-%m-%d %H:%M:%S.%f')
+                earliest = datetime.utcfromtimestamp(symb_all['aggregations']['earliest']['value']/conv_ms).strftime('%Y-%m-%d %H:%M:%S.%f')
 
                 while True:
   
@@ -148,7 +155,7 @@ class ElasticsearchInterface():
                                                                          {"range":           \
                                                                          {"date":            \
                                                                          {"gte": xlower,     \
-                                                                          "lte": xupper}}} ] }}}, size=0)
+                                                                          "lte": xupper}}} ] }}}, size=es_no_pull)
 
                     followups += follow_count['hits']['total']
                     total_track += len(uuids)
@@ -168,7 +175,7 @@ class ElasticsearchInterface():
                                                                     {"gte": xlower,         \
                                                                      "lte": xupper}}} ] }}, \
                                                                      "sort": "date",        \
-                                                                     "search_after": [z]}, size=1000)
+                                                                     "search_after": [z]}, size=es_pull)
 
                 stats = {"symbol"   : symbol,   \
                          "count"    : count,    \
