@@ -38,6 +38,8 @@ class ElasticsearchInterface():
         self.es.index("initial", doc_type='na', id=uuid, body=entry)
 
     def log_followup(self, uuid):
+        
+        conv_ms = 1000000
 
         entry = {"initid": uuid, \
                  "date": conv_ms*float(datetime.utcnow().strftime('%s.%f'))}
